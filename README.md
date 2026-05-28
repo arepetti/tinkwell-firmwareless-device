@@ -2,7 +2,7 @@
 
 > Build connected IoT devices without writing firmware from scratch.
 
-Tinkwell Firmwareless lets product teams focus on application logic instead of firmware plumbing.
+[Tinkwell Firmwareless](https://github.com/arepetti/Tinkwell-Firmwareless) lets product teams focus on application logic instead of firmware plumbing.
 The SDK handles transport, provisioning, OTA updates, hub communication, and power management.
 You choose **how** to deliver your device logic -- there are three paths, and they can coexist on the same device.
 
