@@ -1,0 +1,11 @@
+{
+  "name": "thermostat-applet",
+  "version": "1.0.0",
+  "description": "Thermostat applet for TW Device SDK applet runtime",
+  "scripts": {
+    "build": "npx asc assembly/index.ts -o build/thermostat.wasm --optimize --noAssert"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0"
+  }
+}

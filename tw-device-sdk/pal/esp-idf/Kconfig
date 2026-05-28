@@ -1,0 +1,19 @@
+menu "TW PAL ESP-IDF"
+
+    config TW_PAL_I2C_BUS
+        int "Default I2C bus number"
+        default 0
+
+    config TW_PAL_I2C_SDA
+        int "Default I2C SDA pin"
+        default 6
+
+    config TW_PAL_I2C_SCL
+        int "Default I2C SCL pin"
+        default 7
+
+    config TW_PAL_I2C_FREQ
+        int "Default I2C frequency (Hz)"
+        default 100000
+
+endmenu

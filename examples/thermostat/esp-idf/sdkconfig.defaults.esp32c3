@@ -1,0 +1,6 @@
+# ESP32-C3 overrides (best QEMU support).
+
+CONFIG_IDF_TARGET="esp32c3"
+
+# C3 has less RAM; reduce stack sizes.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144

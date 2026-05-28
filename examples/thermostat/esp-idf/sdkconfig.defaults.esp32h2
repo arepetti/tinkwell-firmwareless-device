@@ -1,0 +1,7 @@
+# ESP32-H2 overrides (Thread only, no WiFi).
+
+CONFIG_IDF_TARGET="esp32h2"
+
+# Disable WiFi, enable Thread.
+CONFIG_TW_TRANSPORT_WIFI=n
+CONFIG_TW_TRANSPORT_THREAD=y

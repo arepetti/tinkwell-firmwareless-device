@@ -1,0 +1,15 @@
+menu "TW Applet Device"
+
+    config TW_WIFI_SSID
+        string "WiFi SSID (development fallback)"
+        default "your-ssid"
+
+    config TW_WIFI_PASSWORD
+        string "WiFi Password (development fallback)"
+        default "your-password"
+
+    config TW_APPLET_PARTITION
+        string "Flash partition label for applet storage"
+        default "applet"
+
+endmenu

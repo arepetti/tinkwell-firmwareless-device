@@ -1,0 +1,49 @@
+# tw_protocol.options -- nanopb field-level constraints.
+#
+# These ensure nanopb generates statically-sized structs (no malloc)
+# suitable for stack allocation on constrained devices.
+#
+# Syntax: <message>.<field>  <option>:<value>
+# Reference: https://jpa.kapsi.fi/nanopb/docs/reference.html#proto-file-options
+
+# ── String fields: 128-byte max unless overridden ──
+
+*.*name*                         max_size:128
+*.fw_version                     max_size:64
+*.version                        max_size:64
+*.url                            max_size:256
+*.error                          max_size:128
+*.status                         max_size:32
+*.state                          max_size:32
+ConfigEntry.key                  max_size:64
+ConfigEntry.value                max_size:128
+
+# ── Binary fields ──
+
+# Device id (GUID): exactly 16 bytes
+*.id                             max_size:16  fixed_length:true
+
+# SHA-256 digests: exactly 32 bytes
+*.sha256                         max_size:32  fixed_length:true
+
+# Variant: up to 16 bytes
+*.variant                        max_size:16
+
+# Keys
+FactoryProvisionCmd.psk                  max_size:32
+FactoryProvisionCmd.ed25519_private_key  max_size:32  fixed_length:true
+
+# Application-defined payloads
+AppCmd.payload                   max_size:4096
+HeartbeatPayload.app_data        max_size:256
+
+# ── Repeated fields ──
+
+SetConfigCmd.entries             max_count:16
+ProvisionSetCmd.fields           max_count:16
+HeartbeatPayload.sensors         max_count:32
+TelemetryPush.readings           max_count:32
+
+# ── Sensor reading name (shorter than general strings) ──
+
+SensorReading.name               max_size:32

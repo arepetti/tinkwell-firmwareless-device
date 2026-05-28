@@ -1,0 +1,21 @@
+menu "Thermostat"
+
+    config SAFETY_FREEZE_TEMP_C
+        int "Freeze protection threshold (tenths of C)"
+        default 30
+        help
+            If the sensor reads below this value, the relay is
+            forced ON regardless of the current mode.
+
+    config SAFETY_MAX_TEMP_C
+        int "Overheat protection threshold (tenths of C)"
+        default 400
+        help
+            If the sensor reads above this value, the relay is
+            forced OFF regardless of the current mode.
+
+    config THERMOSTAT_TICK_MS
+        int "Tick interval in milliseconds"
+        default 1000
+
+endmenu

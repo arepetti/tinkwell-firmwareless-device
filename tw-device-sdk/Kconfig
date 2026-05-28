@@ -1,0 +1,370 @@
+menu "TW Device SDK"
+
+config TW_THREAD_SAFETY
+    bool "Enable mutex protection for shared SDK state"
+    default y
+    help
+        When enabled, the SDK uses mutexes to protect shared state
+        (sensors, identity, OTA, applet, heartbeat, config).
+        Disable for single-threaded or resource-constrained builds.
+
+menu "Transport"
+    config TW_TRANSPORT_WIFI
+        bool "Enable WiFi transport"
+        default y
+
+    config TW_TRANSPORT_ETHERNET
+        bool "Enable Ethernet transport"
+        default n
+
+    config TW_TRANSPORT_THREAD
+        bool "Enable Thread (802.15.4) transport"
+        default n
+
+    config TW_TRANSPORT_BLE
+        bool "Enable BLE transport"
+        default n
+        help
+            BLE is off by default in the main app to save ~100 KB flash
+            and ~35 KB RAM.  The provisioning partition enables BLE
+            independently in its own sdkconfig.  Enable here only if
+            BLE is used as a runtime transport (not just provisioning).
+
+    config TW_TRANSPORT_BLE_PROVISIONING
+        bool "Use BLE for network provisioning"
+        depends on TW_TRANSPORT_BLE
+        default n
+        help
+            Enable BLE-based provisioning in this binary.  Normally
+            provisioning runs in a dedicated partition that sets this
+            to y in its own sdkconfig.
+endmenu
+
+menu "Network"
+    config TW_NET_USE_DHCP
+        bool "Use DHCP for IP assignment"
+        default y
+        help
+            Try DHCP first.  If it fails within the timeout,
+            fall back to the static IP below.
+
+    config TW_NET_DHCP_TIMEOUT_S
+        int "DHCP timeout in seconds before falling back to static IP"
+        depends on TW_NET_USE_DHCP
+        default 15
+
+    config TW_NET_STATIC_IP
+        string "Static IP address (fallback)"
+        default "192.168.1.100"
+
+    config TW_NET_STATIC_NETMASK
+        string "Static netmask"
+        default "255.255.255.0"
+
+    config TW_NET_STATIC_GW
+        string "Static gateway"
+        default "192.168.1.1"
+endmenu
+
+menu "Power Management"
+    config TW_POWER_DEEP_SLEEP
+        bool "Enable deep sleep mode"
+        default n
+        help
+            When enabled the device enters deep sleep between
+            heartbeat cycles.  Wake interval and listen window
+            are configurable below.
+
+    config TW_SLEEP_INTERVAL_S
+        int "Wake interval in seconds"
+        depends on TW_POWER_DEEP_SLEEP
+        default 300
+
+    config TW_SLEEP_LISTEN_WINDOW_S
+        int "Seconds to stay awake for commands after heartbeat"
+        depends on TW_POWER_DEEP_SLEEP
+        default 30
+
+    config TW_SLEEP_LISTEN_WINDOW_IDLE_S
+        int "Listen window when no commands pending (seconds)"
+        depends on TW_POWER_DEEP_SLEEP
+        default 5
+        help
+            When HeartbeatReply.pending == 0, use this shorter window
+            instead of TW_SLEEP_LISTEN_WINDOW_S. Set to 0 to sleep
+            immediately after the heartbeat.
+
+    config TW_SLEEP_LISTEN_EXTEND_ON_CMD
+        bool "Extend listen window when a command is received"
+        depends on TW_POWER_DEEP_SLEEP
+        default n
+        help
+            When enabled, each received command resets the listen window
+            timer back to TW_SLEEP_LISTEN_WINDOW_S, keeping the device
+            awake as long as the hub is actively sending commands.
+endmenu
+
+menu "OTA"
+    config TW_OTA_ENABLED
+        bool "Enable push-based OTA updates"
+        default y
+
+    config TW_OTA_VERIFY_SIGNATURE
+        bool "Require cryptographic signature on firmware images"
+        default y
+
+    config TW_OTA_ROLLBACK_TIMEOUT_S
+        int "Seconds to confirm new firmware before rollback"
+        default 60
+endmenu
+
+menu "Identity"
+    config TW_IDENTITY_VENDOR_ID
+        int "Default vendor ID"
+        default 0
+        help
+            Compile-time default vendor ID.  Can be overridden
+            during factory provisioning.
+
+    config TW_IDENTITY_PRODUCT_ID
+        int "Default product ID"
+        default 0
+        help
+            Compile-time default product ID.  Can be overridden
+            during factory provisioning.
+
+    config TW_IDENTITY_KEY_TYPE_DEFAULT
+        int "Default identity key type (0=none, 1=ed25519, 2=psk)"
+        default 0
+        help
+            Key type used when no factory provisioning has set one.
+            0=none (no signing), 1=Ed25519, 2=PSK (HMAC-SHA256).
+            The actual key must be provisioned separately.
+endmenu
+
+menu "Provisioning"
+    config TW_PROVISION_SOFTAP
+        bool "Enable SoftAP provisioning"
+        depends on TW_TRANSPORT_WIFI
+        default y
+        help
+            When unprovisioned, start a WiFi access point for LAN-based
+            provisioning via CoAP.  A companion app or curl can send
+            kvtext data to /tw/provision/set.
+
+    config TW_PROVISION_SOFTAP_SSID_PREFIX
+        string "SoftAP SSID prefix"
+        depends on TW_PROVISION_SOFTAP
+        default "TW-Prov"
+        help
+            The AP SSID is this prefix plus the last 2 bytes of the
+            MAC address (e.g. TW-Prov-A1B2).
+
+    config TW_PROVISION_SOFTAP_PASSWORD
+        string "SoftAP password (empty = open)"
+        depends on TW_PROVISION_SOFTAP
+        default ""
+        help
+            WPA2-PSK password for the provisioning AP.  Leave empty
+            for an open network.
+
+    config TW_PROVISION_SOFTAP_MAX_CONN
+        int "Maximum SoftAP client connections"
+        depends on TW_PROVISION_SOFTAP
+        default 4
+
+    config TW_PROVISION_POLL_INTERVAL_MS
+        int "Provisioning CoAP poll interval (ms)"
+        default 500
+        help
+            Sleep interval between CoAP server polls during
+            provisioning (SoftAP, LAN, and BLE).
+endmenu
+
+config TW_NVS_ENCRYPT
+    bool "Enable NVS encryption (ESP32 flash encryption)"
+    default n
+    help
+        When enabled on ESP-IDF, uses nvs_flash_secure_init() with an
+        encrypted key partition (nvs_key).  Requires flash encryption
+        to be active and the nvs_key partition in the partition table.
+        On POSIX builds this has no effect (file permissions are always
+        restricted to 0600).
+
+menu "Hub Communication"
+    config TW_HEARTBEAT_INTERVAL_S
+        int "Heartbeat interval in always-on mode (seconds)"
+        default 60
+
+    config TW_HEARTBEAT_ON_BOOT
+        bool "Send heartbeat immediately on boot"
+        default y
+endmenu
+
+menu "Protocol"
+    choice TW_PROTOCOL
+        prompt "Device-hub communication protocol"
+        default TW_PROTOCOL_COAP
+        help
+            Select the wire protocol used for device-hub communication.
+            Only CoAP is implemented; selecting MQTT will produce a
+            compile-time error until the backend is written.
+
+        config TW_PROTOCOL_COAP
+            bool "CoAP (RFC 7252)"
+
+        config TW_PROTOCOL_MQTT
+            bool "MQTT (NOT YET IMPLEMENTED)"
+    endchoice
+
+    menu "CoAP Settings"
+        depends on TW_PROTOCOL_COAP
+
+        config TW_COAP_PORT
+            int "CoAP server UDP port"
+            default 5683
+
+        config TW_COAP_MAX_RESOURCES
+            int "Maximum number of CoAP resources"
+            default 16
+
+        config TW_COAP_BLOCK_SIZE
+            int "CoAP block transfer size (bytes)"
+            default 1024
+    endmenu
+
+    menu "MQTT Settings (not yet implemented)"
+        depends on TW_PROTOCOL_MQTT
+
+        config TW_MQTT_BROKER_URI
+            string "MQTT broker URI"
+            default "mqtt://localhost:1883"
+
+        config TW_MQTT_CLIENT_ID
+            string "MQTT client ID (empty = auto-generate from UUID)"
+            default ""
+
+        config TW_MQTT_QOS
+            int "Default MQTT QoS level (0, 1, or 2)"
+            default 1
+    endmenu
+endmenu
+
+menu "Applet Runtime"
+    config TW_APPLET_ENABLED
+        bool "Enable WASM applet runtime"
+        default n
+        help
+            When enabled the device can receive and execute WASM
+            applets pushed from the hub.  Adds WAMR dependency
+            (~50 KB code footprint).
+
+    config TW_APPLET_FLASH_PARTITION
+        string "Flash partition for applet storage"
+        depends on TW_APPLET_ENABLED
+        default "applet"
+
+    config TW_APPLET_MAX_SIZE
+        int "Maximum applet size (bytes)"
+        depends on TW_APPLET_ENABLED
+        default 65536
+
+    config TW_WASM_STACK_SIZE
+        int "WASM interpreter stack size (bytes)"
+        depends on TW_APPLET_ENABLED
+        default 8192
+
+    config TW_WASM_HEAP_SIZE
+        int "WASM interpreter heap size (bytes)"
+        depends on TW_APPLET_ENABLED
+        default 32768
+endmenu
+
+menu "Protobuf"
+    config TW_USE_PROTOBUF
+        bool "Use nanopb for wire encoding/decoding"
+        default y
+        help
+            When enabled (default), all CoAP endpoints use protobuf
+            payloads via nanopb.  Disable to send/receive raw bytes
+            and handle encoding in application code.
+
+    config TW_CMD_PATH_PREFIX
+        string "CoAP path prefix for hub-pushed commands"
+        default "tw"
+        help
+            Hub commands are received at /<prefix>/<command>.
+            Default paths: /tw/reboot, /tw/set-config, etc.
+endmenu
+
+menu "Provisioning Options"
+    config TW_FACTORY_PROVISION_REQUIRED
+        bool "Require at least one factory provisioning pass"
+        default n
+        help
+            When enabled, the device will not accept hub provisioning
+            until POST /tw/provision/factory has been called at least
+            once.  When disabled (default), hub provisioning is allowed
+            immediately using compile-time identity defaults.
+            Factory provisioning is idempotent: it can be called
+            multiple times until finalize=true locks it permanently.
+endmenu
+
+menu "GPIO Reset Button"
+    config TW_REPROVISION_GPIO
+        bool "Enable GPIO button for factory reset / re-provisioning"
+        default n
+        help
+            When enabled, holding a GPIO button clears hub provisioning
+            and reboots to the provisioning partition.  No automatic
+            re-provisioning on WiFi failure.
+
+    config TW_REPROVISION_GPIO_PIN
+        int "GPIO pin number for reset button"
+        depends on TW_REPROVISION_GPIO
+        default 9
+        help
+            GPIO pin connected to a button (active low with internal
+            pull-up).  Default 9 is the BOOT button on ESP32-C3 DevKit.
+
+    config TW_REPROVISION_GPIO_HOLD_S
+        int "Button hold duration to trigger re-provisioning (seconds)"
+        depends on TW_REPROVISION_GPIO
+        default 5
+endmenu
+
+menu "Sensor Telemetry"
+    config TW_SENSOR_PUSH
+        bool "Push sensor readings to hub"
+        default n
+        help
+            When enabled, sensor readings are sent to the hub.
+
+    config TW_SENSOR_PUSH_IN_HEARTBEAT
+        bool "Include sensor readings in heartbeat payload"
+        depends on TW_SENSOR_PUSH
+        default y
+        help
+            Appends registered sensor values as repeated SensorReading
+            fields in HeartbeatPayload.sensors.  Zero extra round-trips.
+
+    config TW_SENSOR_PUSH_DEDICATED
+        bool "Also push to a dedicated telemetry endpoint"
+        depends on TW_SENSOR_PUSH
+        default n
+        help
+            POST /hub/telemetry with a TelemetryPush message on its
+            own schedule, independent of the heartbeat interval.
+
+    config TW_SENSOR_PUSH_INTERVAL_S
+        int "Dedicated telemetry push interval (seconds)"
+        depends on TW_SENSOR_PUSH_DEDICATED
+        default 10
+
+    config TW_SENSOR_PUSH_PATH
+        string "Hub endpoint for dedicated telemetry"
+        depends on TW_SENSOR_PUSH_DEDICATED
+        default "/hub/telemetry"
+endmenu
+
+endmenu

@@ -1,0 +1,15 @@
+menu "TW Thermostat"
+
+    config TW_WIFI_SSID
+        string "WiFi SSID (development fallback)"
+        default "your-ssid"
+        help
+            WiFi SSID used when no provisioned credentials are stored in NVS.
+
+    config TW_WIFI_PASSWORD
+        string "WiFi Password (development fallback)"
+        default "your-password"
+        help
+            WiFi password used when no provisioned credentials are stored in NVS.
+
+endmenu

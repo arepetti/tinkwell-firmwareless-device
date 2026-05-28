@@ -1,0 +1,24 @@
+# sdkconfig defaults for the thermostat example.
+#
+# Target: ESP32-C6 (change via `idf.py set-target esp32c3` for QEMU).
+
+# OTA support.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_ota.csv"
+
+# WiFi (development credentials -- override via menuconfig or provisioning).
+CONFIG_TW_WIFI_SSID="your-ssid"
+CONFIG_TW_WIFI_PASSWORD="your-password"
+
+# Stack sizes.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Watchdog.
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=15
+
+# Logging.
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_DEFAULT_LEVEL=3
+
+# LWIP.
+CONFIG_LWIP_SO_RCVBUF=y

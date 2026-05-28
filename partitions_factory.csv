@@ -1,0 +1,13 @@
+# Partition table for TW Device SDK with factory provisioning app.
+#
+# factory (256KB) + ota_0 (1.25MB) + ota_1 (1.25MB) + NVS + nvs_key + OTA data.
+# Total flash assumed: 4 MB minimum.
+#
+# Name,     Type, SubType,  Offset,   Size,    Flags
+nvs,        data, nvs,      0x9000,   0x6000,
+nvs_key,    data, nvs_keys, 0xf000,   0x1000,
+otadata,    data, ota,      0x10000,  0x2000,
+factory,    app,  factory,  0x20000,  0x40000,
+ota_0,      app,  ota_0,    0x60000,  0x140000,
+ota_1,      app,  ota_1,    0x1A0000, 0x140000,
+storage,    data, fat,      0x2E0000, 0x120000,

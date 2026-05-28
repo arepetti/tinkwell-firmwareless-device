@@ -1,0 +1,158 @@
+// tw_protocol.proto -- Canonical wire protocol schema for Tinkwell Device SDK.
+//
+// Single source of truth for all protobuf-encoded device communication.
+// Both the main app and provisioning partitions link this file; the linker
+// strips encode/decode functions for unreferenced messages (--gc-sections).
+//
+// On-device: nanopb (C).  Hub/CLI: Google.Protobuf (C#).
+//
+// SPDX-License-Identifier: MIT
+
+syntax = "proto3";
+package tw;
+
+// ── Shared ──────────────────────────────────────────────────────────────
+
+message ConfigEntry {
+  string key   = 1;
+  string value = 2;
+}
+
+// ── Hub-to-device commands (main app, POST /<prefix>/<command>) ─────────
+
+// POST /tw/reboot -- empty body is valid (no fields required).
+
+message SetConfigCmd {
+  repeated ConfigEntry entries = 1;
+}
+
+message OtaAvailableCmd {
+  string url        = 1;
+  bytes  sha256     = 2;  // 32-byte SHA-256 digest of the firmware image
+  uint32 size_bytes = 3;
+}
+
+message AppCmd {
+  bytes payload = 1;      // application-defined opaque payload
+}
+
+// ── Provisioning (provisioning partition only, not in main app) ─────────
+
+// Hub provisioning: assigns only the device id (16-byte GUID).
+message HubProvisionCmd {
+  bytes id = 1;           // 16-byte GUID assigned by the hub
+}
+
+// Factory provisioning: idempotent, only provided (non-default) fields
+// are written.  Can be called multiple times unless finalize=true was sent.
+// Fields are marked `optional` so proto3 can distinguish "not set" from "set
+// to 0/empty" -- critical for partial updates where 0 is a valid value.
+message FactoryProvisionCmd {
+  optional int32  vendor_id            = 1;
+  optional string vendor_display_name  = 2;
+  optional int32  product_id           = 3;
+  optional string product_display_name = 4;
+  optional int32  serial_number        = 5;
+  bytes  variant              = 6;
+  bytes  id                   = 7;   // optional initial GUID
+  bytes  psk                  = 8;   // optional PSK key material
+  bytes  ed25519_private_key  = 9;   // optional Ed25519 private seed (32 bytes)
+  bool   finalize             = 10;  // permanently lock factory provisioning
+}
+
+message ProvisionSetCmd {
+  repeated ConfigEntry fields = 1;   // WiFi SSID, hub URL, etc.
+}
+
+message ProvisionInfo {
+  string     status             = 1; // "factory-pending", "hub-pending", "provisioned"
+  DeviceInfo device             = 2;
+  bool       factory_done       = 3; // at least one factory pass completed
+  bool       factory_finalized  = 4; // locked -- no further factory provisioning
+}
+
+message ProvisionReply {
+  bool   success = 1;
+  string error   = 2;
+}
+
+// ── Device info (GET /tw/info) ──────────────────────────────────────────
+
+message DeviceInfo {
+  bytes  id                   = 1;   // 16-byte GUID
+  int32  vendor_id            = 2;
+  string vendor_display_name  = 3;
+  int32  product_id           = 4;
+  string product_display_name = 5;
+  int32  serial_number        = 6;
+  bytes  variant              = 7;
+  string fw_version           = 8;
+  string device_name          = 9;
+}
+
+// ── OTA (begin/commit/status -- /tw/ota/block stays raw) ────────────────
+
+message OtaBeginCmd {
+  uint32 size_bytes = 1;
+  bytes  sha256     = 2;  // 32-byte SHA-256 of the new firmware
+  string version    = 3;
+}
+
+message OtaStatus {
+  string state            = 1;  // "idle", "downloading", "verifying", "ready"
+  uint32 progress_percent = 2;
+  string error            = 3;
+}
+
+message OtaCommitReply {
+  bool   success = 1;
+  string error   = 2;
+}
+
+// ── Applets (commit/status -- /tw/applet/push stays raw) ────────────────
+
+message AppletStatus {
+  string state      = 1;  // "empty", "loaded", "running", "error"
+  uint32 size_bytes = 2;
+  bytes  sha256     = 3;  // 32-byte SHA-256 of the loaded applet
+}
+
+message AppletCommitReply {
+  bool   success = 1;
+  string error   = 2;
+}
+
+// ── Sensor telemetry ────────────────────────────────────────────────────
+
+message SensorReading {
+  string name         = 1;
+  double value        = 2;
+  uint64 timestamp_ms = 3;
+}
+
+message TelemetryPush {
+  repeated SensorReading readings = 1;
+}
+
+message TelemetryReply {
+  uint32 next_interval_s = 1;  // 0 = keep current interval
+}
+
+// ── Heartbeat ───────────────────────────────────────────────────────────
+
+message HeartbeatPayload {
+  bytes  id            = 1;   // 16-byte GUID
+  int32  vendor_id     = 2;
+  int32  product_id    = 3;
+  int32  serial_number = 4;
+  string fw_version    = 5;
+  uint64 uptime_ms     = 6;
+  uint32 free_heap     = 7;
+  int32  boot_reason   = 8;
+  bytes  app_data      = 9;   // optional application-defined blob
+  repeated SensorReading sensors = 10;
+}
+
+message HeartbeatReply {
+  uint32 pending = 1;         // number of commands the hub will push
+}
